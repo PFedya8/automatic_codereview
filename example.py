@@ -1,5 +1,6 @@
 # example.py
-
+import math
+import nump
 def calculate_area(l, b):
     # Calculates area of rectangle
     area = l * b
