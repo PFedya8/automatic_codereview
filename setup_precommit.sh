@@ -1,9 +1,12 @@
 #!/bin/bash
 
 # setup_precommit.sh
-
-curl -fsSL https://ollama.com/install.sh | sh
-
+if ! command -v ollama &> /dev/null; then
+    echo "Ollama is not installed. Installing Ollama..."
+    curl -fsSL https://ollama.com/install.sh | sh
+else
+    echo "Ollama is already installed."
+fi
 ollama pull codellama
 
 HOOK_FILE=".git/hooks/pre-commit"
