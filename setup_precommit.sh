@@ -2,6 +2,9 @@
 
 # setup_precommit.sh
 
+curl -fsSL https://ollama.com/install.sh | sh
+
+ollama pull codellama
 
 HOOK_FILE=".git/hooks/pre-commit"
 
