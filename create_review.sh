@@ -37,7 +37,7 @@ load_config() {
 load_config
 
 # Get the directory to run the script from, prompt if not set in config
-if [ -z "$TARGET_DIR" ]; then
+if [ -z "$TARGET_DIR" ];then
     read -p "Enter the directory to run the script from: " TARGET_DIR
 fi
 
@@ -50,7 +50,7 @@ fi
 if [ ${#INCLUDE_EXTENSIONS[@]} -eq 0 ]; then
     read -p "Enter the file extensions to include (comma separated, or 'all' for all files): " EXTENSIONS_INPUT
 
-    if [ "$EXTENSIONS_INPUT" == "all" ]; then
+    if [ "$EXTENSIONS_INPUT" == "all" ];then
         INCLUDE_EXTENSIONS=("*")
     else
         IFS=',' read -ra INCLUDE_EXTENSIONS <<< "$EXTENSIONS_INPUT"
@@ -98,15 +98,46 @@ if [ -z "$FILES" ]; then
   exit 0
 fi
 
+# Function to send smaller chunks of code to ollama
+send_code_to_ollama() {
+    local content="$1"
+    local prompt="$2"
+    
+    # Set maximum number of characters per request
+    local MAX_LENGTH=2000  # Limit to avoid the argument list too long issue
+    local suggestions=""
+    
+    while [ -n "$content" ]; do
+        # Take the first chunk of content within the limit
+        local chunk="${content:0:$MAX_LENGTH}"
+        
+        # Send to ollama and get suggestions
+        local response=$(ollama run codellama "Code: $chunk $prompt")
+        
+        # Append the suggestions
+        suggestions+="$response\n"
+        
+        # Remove the chunk from content
+        content="${content:$MAX_LENGTH}"
+    done
+
+    echo -e "$suggestions"
+}
+
 # Loop through each file and create the review
 for FILE in $FILES; do
+  # Read the content of the file
   content=$(cat "$FILE")
+  
+  # Prepare prompt for code review
   prompt="\nReview this code, provide suggestions for improvement, coding best practices, improve readability, and maintainability. Remove any code smells and anti-patterns. Provide code examples for your suggestion. Respond in markdown format. If the file does not have any code or does not need any changes, say 'No changes needed'."
-
-  suggestions=$(ollama run codellama "Code: $content $prompt")
-
+  
+  # Call the function to send content to ollama in smaller chunks
+  suggestions=$(send_code_to_ollama "$content" "$prompt")
+  
+  # Save the suggestions to the review file
   REVIEW_FILE="$REVIEW_DIR/$(basename "$FILE").review.md"
-
+  
   echo "## Review for $FILE" > "$REVIEW_FILE"
   echo "" >> "$REVIEW_FILE"
   echo "$suggestions" >> "$REVIEW_FILE"
